@@ -1,0 +1,6 @@
+PUT key1 value1
+PUT key2 value2
+READ key1
+GET key2
+READ key3
+PUT key1 new_value1  # 应返回错误（键已存在）
