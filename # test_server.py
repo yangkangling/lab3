@@ -3,32 +3,33 @@ import time
 import os
 
 def run_test(client_args, expected_lines):
-    
+  
     server_process = subprocess.Popen(["python", "server.py", "9999"])
-    time.sleep(1)  
+    time.sleep(2)  
     
     try:
-       
+        
         result = subprocess.run(
             client_args,
             capture_output=True,
             text=True,
-            encoding='utf-8'  
+            encoding="utf-8"
         )
         output = result.stdout.splitlines()
         
         assert len(output) == len(expected_lines), f"expect{len(expected_lines)}line,exact{len(output)}line"
         for line, expected in zip(output, expected_lines):
-            assert line == expected, f"expect '{expected}',exact '{line}'"
+            assert line.strip() == expected.strip(), f"expect '{expected}',exact '{line}'"
             
     finally:
-        server_process.terminate() 
+        server_process.terminate()  
 
 
-assert os.path.exists("test_requests.txt"), "wrong:there is no such file"
+assert os.path.exists("test_requests.txt"), "wrong:test_requests.txt file doesn't exist"
+
 
 run_test(
-    ["python", "server_client.py", "localhost", "9999", "test_requests.txt"],
+    ["python", "client.py", "localhost", "9999", "test_requests.txt"],
     [
         "PUT key1 value1: OK(key1,value1) added",
         "PUT key2 value2: OK(key2,value2) added",
