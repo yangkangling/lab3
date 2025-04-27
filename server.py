@@ -9,7 +9,6 @@ class TupleSpaceServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
     def process_line(self, line):
         try:
-            # 在请求处理时读取文件
             with open("test_requests.txt", "r", encoding="utf-8") as f:
                 lines = f.readlines()
         except FileNotFoundError:
@@ -62,7 +61,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
                 data += chunk
             if not data:
                 break
-            line = data.decode('utf-8').strip()  # 强制 UTF-8 解码
+            line = data.decode('utf-8').strip() 
             response = self.server.process_line(line)
             self.request.sendall(response.encode('utf-8') + b'\n')
 
