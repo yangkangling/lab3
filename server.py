@@ -8,45 +8,45 @@ class TupleSpaceServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         self.lock = threading.Lock()
 
     def process_line(self, line):
-        try:
-            with open("test_requests.txt", "r", encoding="utf-8") as f:
-                lines = f.readlines()
-        except FileNotFoundError:
-            return "ERR test_requests.txt not found"
-
-        parts = line.split()
+        parts = line.strip().split()
         if not parts:
             return "ERR invalid request"
+        
         cmd = parts[0].upper()
         if cmd == 'PUT':
             if len(parts) < 3:
                 return "ERR invalid PUT command"
+            
             key = parts[1]
             value = ' '.join(parts[2:])
             if len(key) > 999 or len(value) > 999 or (len(key) + 1 + len(value)) > 970:
                 return f"ERR {key} invalid length"
+            
             with self.lock:
                 if key in self.tuples:
                     return f"ERR {key} already exists"
                 self.tuples[key] = value
-                return f"OK ({key}, {value}) added"
+                return f"OK({key},{value})added"  
+        
         elif cmd in ('GET', 'READ'):
             if len(parts) < 2:
-                return "ERR invalid GET/READ command"
+                return f"ERR invalid {cmd} command"
+            
             key = parts[1]
             if len(key) > 999:
                 return f"ERR {key} invalid length"
+            
             with self.lock:
+                if key not in self.tuples:
+                    return f"ERR {key} does not exist"
+                
                 if cmd == 'GET':
-                    if key not in self.tuples:
-                        return f"ERR {key} does not exist"
                     value = self.tuples.pop(key)
-                    return f"OK ({key}, {value}) removed"
+                    return f"OK({key},{value})removed"
                 else:
-                    if key not in self.tuples:
-                        return f"ERR {key} does not exist"
                     value = self.tuples[key]
-                    return f"OK ({key}, {value}) read"
+                    return f"OK({key},{value})read"
+        
         else:
             return "ERR unknown command"
 
@@ -59,9 +59,11 @@ class RequestHandler(socketserver.BaseRequestHandler):
                 if not chunk or chunk == b'\n':
                     break
                 data += chunk
+            
             if not data:
                 break
-            line = data.decode('utf-8').strip() 
+            
+            line = data.decode('utf-8').strip()
             response = self.server.process_line(line)
             self.request.sendall(response.encode('utf-8') + b'\n')
 

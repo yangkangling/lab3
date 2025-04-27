@@ -8,8 +8,8 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 def main():
    
     if len(sys.argv) != 4: 
-        print("Usage: client.py <host> <port> <request_file>")
-        return
+        print("Usage: server_client.py <host> <port> <request_file>")
+        sys.exit(1)
 
     host = sys.argv[1]
     port_str = sys.argv[2]  
@@ -73,6 +73,9 @@ def main():
                     print(f"{request.strip()}: {response}")
     except Exception as e:
         print(f"Error: {e}")
+
+
+  
 
 if __name__ == "__main__":
     main()

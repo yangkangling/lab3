@@ -3,12 +3,16 @@ import time
 import os
 import socket
 
+class TupleSpaceServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    allow_reuse_address = True  
+
+
 def wait_for_port(port, timeout=10):
     """ Waiting for the port to become connectable """
     start = time.time()
     while time.time() - start < timeout:
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            with socket.socket() as s:
                 s.connect(('localhost', port))
                 return True
         except ConnectionRefusedError:
@@ -16,39 +20,49 @@ def wait_for_port(port, timeout=10):
     return False
 
 def run_test(client_args, expected_lines):
-   
+    server_process = subprocess.Popen(["python", "server.py", "9999"])
+
+    result = subprocess.run(
+        client_args,
+        capture_output=True,
+        text=True,
+        encoding="utf-8"
+    )
+    print("Actual client output:\n", result.stdout) 
+    print("Client error message:\n", result.stderr)
+
+
     server_process = subprocess.Popen(
-        ["python", "server.py", "9999"],
+        ["python", "server_client.py", "localhost", "9999", "test_requests.txt"],
         stderr=subprocess.DEVNULL
     )
     
     try:
-        
-        if not wait_for_port(9999):
-            raise RuntimeError("服务器启动超时")
        
+        if not wait_for_port(9999):
+            raise RuntimeError("Server startup failed, port not listening")
+        
         result = subprocess.run(
             client_args,
             capture_output=True,
             text=True,
             encoding="utf-8",
-            timeout=15  
+            timeout=15
         )
+       
+        print("[Server stdout]\n" + result.stdout)
+        print("[Server stderr]\n" + result.stderr)
+       
+        output = [line.strip() for line in result.stdout.splitlines() if line.strip()]
         
-        output = result.stdout.splitlines()
-        print("实际客户端输出：")  
-        for line in output:
-            print(f"> {line}")
-        
-    
-        assert len(output) == len(expected_lines), f"expect{len(expected_lines)}line , exact{len(output)}line."
-        for line, expected in zip(output, expected_lines):
-            assert line.strip() == expected.strip(), f"expect '{expected}',exact '{line}'"
+        assert len(output) == len(expected_lines), f"expect{len(expected_lines)}line,actual{len(output)}line"
+        for act, exp in zip(output, expected_lines):
+            assert act == exp, f"expect '{exp}',actual '{act}'"
             
     finally:
         server_process.terminate()
 
-assert os.path.exists("test_requests.txt"), "wrong:test_requests.txt file doesn't exist."
+assert os.path.exists("test_requests.txt"), "Error: The requested file does not exist!"
 
 run_test(
     ["python", "server_client.py", "localhost", "9999", "test_requests.txt"],
