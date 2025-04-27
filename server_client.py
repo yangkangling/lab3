@@ -1,23 +1,33 @@
 import socket
 import sys
 
-# 强制 Python 使用 UTF-8 编码（添加到脚本开头）
 import io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: client.py <request_file>")
+   
+    if len(sys.argv) != 4: 
+        print("Usage: client.py <host> <port> <request_file>")
         return
-    filename = sys.argv[1]
-    host = 'localhost'
-    port = 9999
+
+    host = sys.argv[1]
+    port_str = sys.argv[2]  
+    filename = sys.argv[3]
+
+    
+    try:
+        port = int(port_str)
+    except ValueError:
+        print(f"Error: Port number must be an integer (current value:{port_str})")
+        return
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            
             s.connect((host, port))
-            with open(filename, 'r', encoding='utf-8') as f:  # 显式指定文件编码
+            with open(filename, 'r', encoding='utf-8') as f:
+                
                 for line in f:
                     line = line.strip()
                     if not line:
@@ -58,8 +68,8 @@ def main():
                         request = f"GET {key}\n"
                     else:
                         request = f"READ {key}\n"
-                    s.sendall(request.encode('utf-8'))  # 显式指定发送编码
-                    response = s.recv(1024).decode('utf-8').strip()  # 显式指定接收编码
+                    s.sendall(request.encode('utf-8'))
+                    response = s.recv(1024).decode('utf-8').strip()
                     print(f"{request.strip()}: {response}")
     except Exception as e:
         print(f"Error: {e}")
