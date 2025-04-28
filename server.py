@@ -1,7 +1,14 @@
 import socketserver
 import threading
+import socket 
 
 class TupleSpaceServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    allow_reuse_address = True
+    
+    def server_bind(self):
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # 新增这行
+        super().server_bind()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tuples = {}
@@ -50,25 +57,39 @@ class TupleSpaceServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         else:
             return "ERR unknown command"
 
+
 class RequestHandler(socketserver.BaseRequestHandler):
     def handle(self):
         while True:
-            data = b''
-            while True:
-                chunk = self.request.recv(1)
-                if not chunk or chunk == b'\n':
+            try:
+                header = self.request.recv(4)
+                if len(header) < 4 or not header[:3].isdigit():
                     break
-                data += chunk
+                
+                msg_length = int(header[:3])
             
-            if not data:
+                data = b''
+                while len(data) < msg_length:
+                    chunk = self.request.recv(msg_length - len(data))
+                    if not chunk:
+                        break
+                    data += chunk
+                
+                if len(data) == msg_length:
+                    line = data.decode('utf-8').strip()
+                    response = self.server.process_line(line)
+              
+                    response_msg = f"{len(response):03d} {response}"
+                    self.request.sendall(response_msg.encode('utf-8'))
+                else:
+                    break
+            except ConnectionResetError:
                 break
-            
-            line = data.decode('utf-8').strip()
-            response = self.server.process_line(line)
-            self.request.sendall(response.encode('utf-8') + b'\n')
 
+    
 if __name__ == "__main__":
-    HOST, PORT = 'localhost', 9999
+    HOST, PORT = 'localhost', 5000
     server = TupleSpaceServer((HOST, PORT), RequestHandler)
     print(f"Server running on {HOST}:{PORT}")
     server.serve_forever()
+    
