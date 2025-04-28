@@ -31,7 +31,7 @@ class TupleSpaceServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
             
             with self.lock:
                 if key in self.tuples:
-                    return f"ERR {key} already exists"
+                    return f"ERR {key}alreadyexists"
                 self.tuples[key] = value
                 return f"OK({key},{value})added"  
         
@@ -45,7 +45,7 @@ class TupleSpaceServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
             
             with self.lock:
                 if key not in self.tuples:
-                    return f"ERR {key} does not exist"
+                    return f"ERR {key}doesnotexist"
                 
                 if cmd == 'GET':
                     value = self.tuples.pop(key)
@@ -59,37 +59,42 @@ class TupleSpaceServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 
 class RequestHandler(socketserver.BaseRequestHandler):
+    buffer = b''  
     def handle(self):
         while True:
             try:
-                header = self.request.recv(4)
-                if len(header) < 4 or not header[:3].isdigit():
+                data = self.request.recv(1024)
+                if not data:
                     break
-                
-                msg_length = int(header[:3])
-            
-                data = b''
-                while len(data) < msg_length:
-                    chunk = self.request.recv(msg_length - len(data))
-                    if not chunk:
-                        break
-                    data += chunk
-                
-                if len(data) == msg_length:
-                    line = data.decode('utf-8').strip()
-                    response = self.server.process_line(line)
-              
-                    response_msg = f"{len(response):03d} {response}"
-                    self.request.sendall(response_msg.encode('utf-8'))
-                else:
-                    break
-            except ConnectionResetError:
-                break
+                self.buffer += data
 
+                while len(self.buffer) >= 4:
+                    header = self.buffer[:4]
+                    if not header[:3].isdigit():
+                        break  
+                    
+                    msg_length = int(header[:3])
+                    if len(self.buffer) >= 4 + msg_length:
+                        
+                        full_msg = self.buffer[4:4+msg_length]
+                        self.buffer = self.buffer[4+msg_length:]
+                        
+                        line = full_msg.decode('utf-8').strip()
+                        response = self.server.process_line(line)
+                        response_msg = f"{len(response):03d} {response}"
+                        self.request.sendall(response_msg.encode('utf-8'))
+                    else:
+                        break  
+            except:
+                break
     
 if __name__ == "__main__":
     HOST, PORT = 'localhost', 5000
-    server = TupleSpaceServer((HOST, PORT), RequestHandler)
-    print(f"Server running on {HOST}:{PORT}")
-    server.serve_forever()
-    
+    try:
+        server = TupleSpaceServer((HOST, PORT), RequestHandler)
+        print(f"[STATUS] Server started at {HOST}:{PORT}")
+        server.serve_forever()
+    except Exception as e:
+        print(f"[FATAL] Server failed to start:{str(e)}")
+    finally:
+        server.shutdown()

@@ -66,6 +66,23 @@ def run_test(client_args, expected_lines):
 
 assert os.path.exists("test_requests.txt"), "Error: The requested file does not exist!"
 
+
+
+def check_port(port):
+    result = subprocess.run(
+        ["netstat", "-ano"], 
+        capture_output=True, 
+        text=True
+    )
+    lines = result.stdout.split('\n')
+    return any(f":{port}" in line for line in lines)
+
+if check_port(5000):
+    print("Port 5000 is already in use.")
+else:
+
+    print("Port 5000 is available.")
+
 run_test(
     ["python", "server_client.py", "localhost", "9999", "test_requests.txt"],
     [
