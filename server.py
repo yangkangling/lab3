@@ -74,7 +74,8 @@ class RequestHandler(socketserver.BaseRequestHandler):
 with open("test_requests.txt", "r", encoding='utf-8') as f:
     lines = f.readlines()
 if __name__ == "__main__":
-    HOST, PORT = '0,0,0,0', 9999
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 5000
+    HOST, PORT = '0.0.0.0', port 
     try:
         server = TupleSpaceServer((HOST, PORT), RequestHandler)
         print(f"[STATUS] Server started at {HOST}:{PORT}")

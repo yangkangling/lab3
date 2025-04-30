@@ -69,6 +69,7 @@ if __name__ == "__main__":
     if not os.path.exists("test_requests.txt"):
         print("Error: Missing test file test_requests.txt")
         os._exit(1)
+        
     run_test(
         ["python", "server_client.py", "localhost", "test_requests.txt"],  
         [
