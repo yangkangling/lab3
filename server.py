@@ -1,7 +1,7 @@
 import socketserver
 import socket
-from tuple_space import TupleSpace
-from protocol_server import ProtocolHandler
+from TupleSpace import TupleSpace
+from protocol_client import ProtocolHandler
 
 class TupleSpaceServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     allow_reuse_address = True
@@ -74,7 +74,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
 with open("test_requests.txt", "r", encoding='utf-8') as f:
     lines = f.readlines()
 if __name__ == "__main__":
-    HOST, PORT = 'localhost', 5000
+    HOST, PORT = '0,0,0,0', 9999
     try:
         server = TupleSpaceServer((HOST, PORT), RequestHandler)
         print(f"[STATUS] Server started at {HOST}:{PORT}")
