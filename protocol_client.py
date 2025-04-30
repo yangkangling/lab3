@@ -2,6 +2,9 @@ import socket
 
 class ProtocolHandler:
     @staticmethod
+    def encode_command(command):
+        length = len(command)
+        return f"{length:03d} {command}"
     def validate_length(key, value):
         """Verify whether the key value length meets the protocol requirements"""
         if len(key) > 999 or len(value) > 999:
