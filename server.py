@@ -1,7 +1,7 @@
 import socketserver
 import socket
 from tuple_space import TupleSpace
-from protocol import ProtocolHandler
+from protocol_server import ProtocolHandler
 
 class TupleSpaceServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     allow_reuse_address = True
@@ -71,7 +71,8 @@ class RequestHandler(socketserver.BaseRequestHandler):
 
         else:
             return ProtocolHandler.generate_response("ERR unknown command")
-
+with open("test_requests.txt", "r", encoding='utf-8') as f:
+    lines = f.readlines()
 if __name__ == "__main__":
     HOST, PORT = 'localhost', 5000
     try:
