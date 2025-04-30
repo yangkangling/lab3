@@ -1,21 +1,30 @@
 import socket
 
-def protocol_client(host, port, command):
-    try:
-        msg = f"{len(command):03d} {command}"
-        with socket.create_connection((host, port), timeout=5) as s:
-            s.sendall(msg.encode())
-            
-            header = s.recv(4)
-            if len(header) < 4:
-                return "ERR invalid response header"
-                
-            resp_length = int(header[:3])
-            data = s.recv(resp_length)
-            return data.decode()
-            
-    except Exception as e:
-        return f"ERR ClientError: {str(e)}"
+class ProtocolHandler:
+    @staticmethod
+    def validate_length(key, value):
+        """Verify whether the key value length meets the protocol requirements"""
+        if len(key) > 999 or len(value) > 999:
+            return False, f"ERR {key} invalid length"
+        if (len(key) + 1 + len(value)) > 970:
+            return False, f"ERR {key} invalid length"
+        return True, ""
 
-if __name__ == "__main__":
-    print(protocol_client("localhost", 5000, "PUT test1 value1"))
+    @staticmethod
+    def parse_request(data_buffer):
+        """Analyze the message header and extract the complete message"""
+        if len(data_buffer) < 4 or not data_buffer[:3].isdigit():
+            return None, data_buffer
+
+        msg_length = int(data_buffer[:3])
+        if len(data_buffer) < 4 + msg_length:
+            return None, data_buffer
+
+        full_msg = data_buffer[4:4+msg_length].decode('utf-8').strip()
+        remaining_buffer = data_buffer[4+msg_length:]
+        return full_msg, remaining_buffer
+
+    @staticmethod
+    def generate_response(response_str):
+        """Generate response with length prefix"""
+        return f"{len(response_str):03d} {response_str}".encode('utf-8')
