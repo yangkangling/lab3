@@ -6,7 +6,7 @@ import socketserver
 
 
 class TupleSpaceServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-    allow_reuse_address = True  
+    allow_reuse_address = TURE 
 
 
 def wait_for_port(port, timeout=10):
