@@ -4,3 +4,7 @@ READ key1
 GET key2
 READ key3
 PUT key1 new_value1 
+
+PUT Manchester-United 20
+READ Liverpool
+PUT Arsenal 13

@@ -4,7 +4,7 @@ class TupleSpace:
     def __init__(self):
         self._tuples = {}  
         self._lock = threading.Lock()  
-    
+
     def put(self, key, value):
         
         # Verify the total length of key values

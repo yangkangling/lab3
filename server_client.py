@@ -17,7 +17,7 @@ class TupleSpaceServer:
             'start_time': time.time()
         }
         self.running = True
-
+         
     def handle_client(self, conn, addr):
         with conn:
             self.stats['total_clients'] += 1
@@ -48,31 +48,39 @@ class TupleSpaceServer:
                     self.stats['reads'] += 1
                     if key in self.tuple_space:
                         v = self.tuple_space[key]
+                        msg_content = f"OK ({key}, {v}) read" 
                         response = f"{len(f'OK ({key}, {v}) read')+3:03d} OK ({key}, {v}) read"
                     else:
+                        msg_content = f"ERR {key} does not exist"
                         response = f"{len(f'ERR {key} does not exist')+3:03d} ERR {key} does not exist"
                         self.stats['errors'] += 1
                 elif cmd == 'G':
                     self.stats['gets'] += 1
                     if key in self.tuple_space:
                         v = self.tuple_space.pop(key)
+                        msg_content = f"OK ({key}, {v}) read" 
                         response = f"{len(f'OK ({key}, {v}) removed')+3:03d} OK ({key}, {v}) removed"
                     else:
+                        msg_content = f"ERR {key} does not exist"
                         response = f"{len(f'ERR {key} does not exist')+3:03d} ERR {key} does not exist"
                         self.stats['errors'] += 1
                 elif cmd == 'P':
                     self.stats['puts'] += 1
                     if key not in self.tuple_space:
                         if len(key) + len(value) > 970:
+                            msg_content = f"ERR {key} does not exist"
                             response = f"{len(f'ERR key-value too long')+3:03d} ERR key-value too long"
                             self.stats['errors'] += 1
                         else:
                             self.tuple_space[key] = value
+                            msg_content = f"OK ({key}, {v}) read" 
                             response = f"{len(f'OK ({key}, {value}) added')+3:03d} OK ({key}, {value}) added"
                     else:
+                        msg_content = f"ERR {key} does not exist"
                         response = f"{len(f'ERR {key} already exists')+3:03d} ERR {key} already exists"
                         self.stats['errors'] += 1
                 else:
+                    msg_content = f"ERR {key} does not exist"
                     response = f"{len('ERR invalid command')+3:03d} ERR invalid command"
                     self.stats['errors'] += 1
 
@@ -102,8 +110,9 @@ PUTs: {self.stats['puts']}
 Errors: {self.stats['errors']}
 Uptime: {time.time() - self.stats['start_time']:.2f}s
 ========================""")
-    def start_server(self, port):
+    def start_server(self,port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind(('localhost', port))
             s.listen()
             print(f"Server listening on port {port}")
