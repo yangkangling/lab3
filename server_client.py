@@ -17,7 +17,7 @@ class TupleSpaceServer:
             'start_time': time.time()
         }
         self.running = True
-         
+
     def handle_client(self, conn, addr):
         with conn:
             self.stats['total_clients'] += 1
@@ -37,9 +37,20 @@ class TupleSpaceServer:
         try:
             msg_length = int(raw_data[:3])
             cmd = raw_data[4]
-            content = raw_data[5:].split(' ', 1)
-            key = content[0]
-            value = content[1] if len(content) > 1 else ""
+            msg_body = raw_data[5:]
+            key = ""
+            value = ""
+            if cmd == 'P':
+                split_index = msg_body.find(' ')
+                if split_index == -1:
+                    key = msg_body
+                    value = ""
+                else:
+                    key = msg_body[:split_index]
+                    value = msg_body[split_index+1:]
+            else:
+                key = msg_body
+                value = ""
 
             response = ""
             with self.lock:
@@ -48,45 +59,50 @@ class TupleSpaceServer:
                     self.stats['reads'] += 1
                     if key in self.tuple_space:
                         v = self.tuple_space[key]
-                        msg_content = f"OK ({key}, {v}) read" 
-                        response = f"{len(f'OK ({key}, {v}) read')+3:03d} OK ({key}, {v}) read"
+                        msg_content = f"OK ({key}, {v}) read"
+                        response = f"{len(msg_content):03d} {msg_content}"
                     else:
                         msg_content = f"ERR {key} does not exist"
-                        response = f"{len(f'ERR {key} does not exist')+3:03d} ERR {key} does not exist"
+                        response = f"{len(msg_content):03d} {msg_content}"
                         self.stats['errors'] += 1
                 elif cmd == 'G':
                     self.stats['gets'] += 1
                     if key in self.tuple_space:
                         v = self.tuple_space.pop(key)
-                        msg_content = f"OK ({key}, {v}) read" 
-                        response = f"{len(f'OK ({key}, {v}) removed')+3:03d} OK ({key}, {v}) removed"
+                        msg_content = f"OK ({key}, {v}) removed"
+                        response = f"{len(msg_content):03d} {msg_content}"
                     else:
                         msg_content = f"ERR {key} does not exist"
-                        response = f"{len(f'ERR {key} does not exist')+3:03d} ERR {key} does not exist"
+                        response = f"{len(msg_content):03d} {msg_content}"
                         self.stats['errors'] += 1
                 elif cmd == 'P':
                     self.stats['puts'] += 1
                     if key not in self.tuple_space:
-                        if len(key) + len(value) > 970:
-                            msg_content = f"ERR {key} does not exist"
-                            response = f"{len(f'ERR key-value too long')+3:03d} ERR key-value too long"
+                        if not key or not value:
+                            msg_content = "ERR key or value cannot be empty"
+                            response = f"{len(msg_content):03d} {msg_content}"
+                            self.stats['errors'] += 1
+                        elif len(key) + len(value) > 970:
+                            msg_content = "ERR key-value too long"
+                            response = f"{len(msg_content):03d} {msg_content}"
                             self.stats['errors'] += 1
                         else:
                             self.tuple_space[key] = value
-                            msg_content = f"OK ({key}, {v}) read" 
-                            response = f"{len(f'OK ({key}, {value}) added')+3:03d} OK ({key}, {value}) added"
+                            msg_content = f"OK ({key}, {value}) added"
+                            response = f"{len(msg_content):03d} {msg_content}"
                     else:
-                        msg_content = f"ERR {key} does not exist"
-                        response = f"{len(f'ERR {key} already exists')+3:03d} ERR {key} already exists"
+                        msg_content = f"ERR {key} already exists"
+                        response = f"{len(msg_content):03d} {msg_content}"
                         self.stats['errors'] += 1
                 else:
-                    msg_content = f"ERR {key} does not exist"
-                    response = f"{len('ERR invalid command')+3:03d} ERR invalid command"
+                    msg_content = "ERR invalid command"
+                    response = f"{len(msg_content):03d} {msg_content}"
                     self.stats['errors'] += 1
 
             conn.sendall(response.encode())
         except Exception as e:
-            error_msg = f"{len('ERR internal error')+3:03d} ERR internal error"
+            error_msg_content = "ERR internal error"
+            error_msg = f"{len(error_msg_content):03d} {error_msg_content}"
             conn.sendall(error_msg.encode())
             print(f"Error processing request: {e}")
 
@@ -110,7 +126,7 @@ PUTs: {self.stats['puts']}
 Errors: {self.stats['errors']}
 Uptime: {time.time() - self.stats['start_time']:.2f}s
 ========================""")
-    def start_server(self,port):
+    def start_server(self, port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind(('localhost', port))
@@ -129,6 +145,6 @@ Uptime: {time.time() - self.stats['start_time']:.2f}s
                 print("Server shutdown.")
 
 if __name__ == "__main__":
-    port = 51234  
+    port = 5123 
     server = TupleSpaceServer()
     server.start_server(port)

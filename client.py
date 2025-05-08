@@ -18,7 +18,6 @@ def send_request(host, port, key, value, cmd):
         print(response)
 
 if __name__ == "__main__":
-
-    send_request('localhost', 51234, 'name', 'Alice', 'PUT')
-    send_request('localhost', 51234, 'name', '', 'READ')
-    #send_request('localhost', 51234, 'name', '', 'GET')
+    send_request('localhost', 5123, 'name', 'Lily', 'PUT')
+    send_request('localhost', 5123, 'name', 'Bob', 'READ')
+    send_request('localhost', 5123, 'name', 'Joel', 'GET')
