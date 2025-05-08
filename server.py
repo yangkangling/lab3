@@ -1,3 +1,4 @@
+import sys  
 import socketserver
 import socket
 from TupleSpace import TupleSpace
@@ -27,15 +28,12 @@ class RequestHandler(socketserver.BaseRequestHandler):
                 self.buffer += data
 
                 while True:
-                 
                     full_msg, remaining = ProtocolHandler.parse_request(self.buffer)
                     if full_msg is None:
                         break
 
                     self.buffer = remaining
-               
                     response = self.process_command(full_msg)
-                
                     self.request.sendall(response)
 
             except (ConnectionResetError, BrokenPipeError):
@@ -71,9 +69,9 @@ class RequestHandler(socketserver.BaseRequestHandler):
 
         else:
             return ProtocolHandler.generate_response("ERR unknown command")
-with open("test_requests.txt", "r", encoding='utf-8') as f:
-    lines = f.readlines()
+
 if __name__ == "__main__":
+    
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 5000
     HOST, PORT = '0.0.0.0', port 
     try:
